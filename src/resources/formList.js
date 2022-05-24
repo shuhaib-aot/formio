@@ -14,7 +14,7 @@ const formList =(req,res,router)=>{
     titleQuery =regex?{title:{$regex:`${regex[0]}`,$options:`${regex[1]}`}}:{}
     let {MULTI_TENANCY_ENABLED} = process.env
     let tenantQuery={}
-    if(MULTI_TENANCY_ENABLED=='true'&&req.token.tenantId){
+    if(MULTI_TENANCY_ENABLED=== "true" && req.token.tenantId){
         const {tenantId} = req.token
         tenantQuery={tenantId:tenantId}
     }
