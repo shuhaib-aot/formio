@@ -18,7 +18,7 @@ const formList =(req,res,router)=>{
         const {tenantId} = req.token
         tenantQuery={tenantId:tenantId}
     }
-    router.formio.resources.form.model.find({...query,...titleQuery,...tenant}).skip(skipForm).limit(limitForm).sort({title:sortForm}).then(result=>{
+    router.formio.resources.form.model.find({...query,...titleQuery,...tenantQuery}).skip(skipForm).limit(limitForm).sort({title:sortForm}).select(['-deleted']).then(result=>{
         res.json(result)
     }).catch(err=>{
         res.status(403).json(err)
