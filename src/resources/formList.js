@@ -24,6 +24,7 @@ const formList = (req, res, router) => {
       tenantQuery = {tenantKey };
     }else{
       res.json([])
+      return true
     }
    
   }
