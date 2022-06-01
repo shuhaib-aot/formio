@@ -1,8 +1,3 @@
-.vscode
 .idea
 bower_components
 node_modules
-app*
-npm-debug.log
-.env
-mongodb
