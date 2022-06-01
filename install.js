@@ -278,7 +278,7 @@ module.exports = function(formio, items, done) {
 
       // Download the client.
       download(
-        'https://codeload.github.com/shuhaib-aot/client-form/zip/master',
+        'https://codeload.github.com/AOT-Technologies/formio-client/zip/master',
         'client.zip',
         'client',
         done
@@ -296,7 +296,7 @@ module.exports = function(formio, items, done) {
         return done();
       }
 
-      extract('client.zip', 'client-form-master', 'client', done);
+      extract('client.zip', 'formio-client-master', 'client', done);
     },
 
     /**
