@@ -462,26 +462,34 @@ module.exports = function(formio, items, done) {
     }
   };
 
-  util.log('Installing...');
-  prompt.start();
-  async.series([
-    steps.areYouSure,
-    steps.whatApp,
-    steps.downloadApp,
-    steps.extractApp,
-    steps.downloadClient,
-    steps.extractClient,
-    steps.whatTemplate,
-    steps.importTemplate,
-    steps.createRootUser
-  ], function(err, result) {
-    if (err) {
-      util.log(err);
-      return done(err);
-    }
+  if (process.env.FORMIO_CLIENT_UI === "true") {
+    util.log("Installing...");
+    prompt.start();
+    async.series(
+      [
+        steps.areYouSure,
+        steps.whatApp,
+        steps.downloadApp,
+        steps.extractApp,
+        steps.downloadClient,
+        steps.extractClient,
+        steps.whatTemplate,
+        steps.importTemplate,
+        steps.createRootUser,
+      ],
+      function(err, result) {
+        if (err) {
+          util.log(err);
+          return done(err);
+        }
 
-    util.log('Install successful!'.green);
+        util.log("Install successful!".green);
+        done();
+      }
+    );
+  }
+  else {
     done();
-  });
+  }
 };
 
