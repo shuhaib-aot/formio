@@ -127,6 +127,10 @@ module.exports = function(config) {
 
         next();
       });
+      // health check point
+      router.get("/checkpoint",(req,res)=>{
+        res.json({message:"welcome to formsflow-forms"});
+      });
 
       // Establish our url alias middleware.
       if (!router.formio.hook.invoke('init', 'alias', router.formio)) {
@@ -146,6 +150,7 @@ module.exports = function(config) {
       router.use(bodyParser.json({
         limit: '16mb'
       }));
+
       // getting form list
       router.get("/form",router.formio.middleware.tokenVerify,(req,res)=>{
         try {
