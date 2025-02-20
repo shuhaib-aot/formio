@@ -10,14 +10,12 @@ const LOG_EVENT = 'Save Submission Action';
 module.exports = function(router) {
   const Action = router.formio.Action;
   const debug = require('debug')('formio:action:saveSubmission');
-  const logger = require('../util/logger')('formio:action:saveSubmission');
-  const hook = require('../util/hook')(router.formio);
+   const hook = require('../util/hook')(router.formio);
   const ecode = router.formio.util.errorCodes;
   const logOutput = router.formio.log || debug;
   const log = (...args) => {
     logOutput(LOG_EVENT, ...args);
-    logger.error(LOG_EVENT,...args);
-  };
+   };
 
   class SaveSubmission extends Action {
     static info(req, res, next) {
@@ -62,6 +60,7 @@ module.exports = function(router) {
      * @returns {*}
      */
     resolve(handler, method, req, res, next) {
+      const logger = router.logger('formio:action:saveSubmission', req.tenantKey);
       // Return if this is not a PUT or POST.
       if (req.skipSave || !req.body || (req.method !== 'POST' && req.method !== 'PUT' && req.method !== 'PATCH')) {
         return next();
@@ -89,6 +88,7 @@ module.exports = function(router) {
         // the child submissions.
         const childReq = util.createSubRequest(req);
         if (!childReq) {
+          logger.error(ecode.request.EREQRECUR, new Error(ecode.request.EREQRECUR), '#resolve');
           log(
             req,
             ecode.request.EREQRECUR,
@@ -112,6 +112,7 @@ module.exports = function(router) {
             url += '/:submissionId';
           }
           else {
+            logger.error(ecode.resource.ENOIDP, new Error(ecode.resource.ENOIDP), '#resolve');
             log(
               req,
               ecode.resource.ENOIDP,
@@ -128,6 +129,7 @@ module.exports = function(router) {
           router.resourcejs[url][method].call(this, childReq, res, done);
         }
         else {
+          logger.error(ecode.resource.ENOHANDLER, new Error(ecode.resource.ENOHANDLER), '#resolve');
           log(
             req,
             ecode.resource.ENOHANDLER,
@@ -148,6 +150,7 @@ module.exports = function(router) {
       const loadResource = function(cache, then) {
         router.formio.cache.loadForm(req, 'resource', this.settings.resource, function(err, resource) {
           if (err) {
+            logger.error(ecode.cache.EFORMLOAD, err);
             log(req, ecode.cache.EFORMLOAD, err, '#resolve');
             return then(err);
           }
@@ -223,6 +226,7 @@ module.exports = function(router) {
             vm = null;
           }
           catch (err) {
+            logger.error(ecode.submission.ESUBTRANSFORM, err);
             debug(`Error in submission transform: ${err.message}`);
           }
         }
@@ -257,6 +261,7 @@ module.exports = function(router) {
           req.body._id,
           function(err, currentSubmission) {
             if (err) {
+              logger.error(ecode.submission.ESUBLOAD, err);
               log(req, ecode.submission.ESUBLOAD, err, '#resolve');
               return then(err);
             }
@@ -277,6 +282,7 @@ module.exports = function(router) {
               external.id,
               function(err, submission) {
                 if (err) {
+                  logger.error(ecode.submission.ESUBLOAD, err);
                   log(req, ecode.submission.ESUBLOAD, err, '#resolve');
                   return then();
                 }
@@ -295,6 +301,7 @@ module.exports = function(router) {
         async.apply(loadSubmission, cache)
       ], function(err) {
         if (err) {
+          logger.error(err);
           log(req, err);
           return next(err);
         }

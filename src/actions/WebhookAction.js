@@ -10,11 +10,9 @@ module.exports = function(router) {
   const Action = router.formio.Action;
   const hook = router.formio.hook;
   const debug = require('debug')('formio:action:webhook');
-  const logger = require('../util/logger')('formio:action:webhook');
-  const logOutput = router.formio.log || debug;
+   const logOutput = router.formio.log || debug;
   const log = (...args) => {
-    logOutput(LOG_EVENT, ...args);
-    logger.error(LOG_EVENT,...args);
+    logOutput(LOG_EVENT, ...args); 
   };
 
   /**
@@ -107,9 +105,9 @@ module.exports = function(router) {
      *   The callback function to execute upon completion.
      */
     resolve(handler, method, req, res, next, setActionItemMessage) {
+      const logger = router.logger('formio:action:webhook', req.tenantKey);
       const settings = this.settings;
       const logerr = (...args) => log(req, ...args, '#resolve');
-
       /**
        * Util function to handle success for a potentially blocking request.
        *
@@ -142,6 +140,7 @@ module.exports = function(router) {
       const handleError = (data, response) => {
         setActionItemMessage('Webhook failed', response);
         const message = data ? (data.message || data) : response.statusMessage;
+        logger.error(message);
         logerr(message);
 
         if (!_.get(settings, 'block') || _.get(settings, 'block') === false) {
@@ -199,6 +198,7 @@ module.exports = function(router) {
         // eslint-disable-next-line
         const onParseError = (err, response) => {
           if (response.status === 404) {
+            logger.error(ecode.webhook.EWEBHOOK404, new Error(ecode.webhook.EWEBHOOK404));
             return handleError(null, response);
           }
           throw err;
@@ -255,6 +255,7 @@ module.exports = function(router) {
         makeRequest(url, req.method, options, payload);
       }
       catch (e) {
+        logger.error(e);
         setActionItemMessage('Error occurred', e, 'error');
         handleError(e);
       }

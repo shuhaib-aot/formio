@@ -14,6 +14,7 @@ module.exports = function(router) {
   const _ = require('lodash');
 
   return async function accessHandler(req, res, next) {
+    const logger = router.logger('accessHandler', req.tenantKey);
     // Load all the roles.
     const roles = {};
 
@@ -25,6 +26,7 @@ module.exports = function(router) {
         .exec();
 
       if (!roleResult) {
+        logger.error('Could not load the Roles.');
         return res.status(400).send('Could not load the Roles.');
       }
 
@@ -35,6 +37,7 @@ module.exports = function(router) {
       });
     }
     catch (err) {
+      logger.error(err);
       return res.status(400).send('Could not load the Roles.');
     }
 
@@ -49,12 +52,14 @@ module.exports = function(router) {
         .exec();
 
       if (!formResult) {
+        logger.error('Could not load the Forms.');
         return res.status(400).send('Could not load the Forms.');
       }
 
       formResult.forEach(form => forms[form.name] = form);
     }
     catch (err) {
+      logger.error(err);
       return res.status(400).send('Could not load the Forms.');
     }
 
@@ -81,6 +86,7 @@ module.exports = function(router) {
       res.status(200).json({roles: accessInfo.roles, forms: accessInfo.forms});
     }
     catch (err) {
+      logger.error(err);
       return res.status(400).send(err.toString());
     }
   };

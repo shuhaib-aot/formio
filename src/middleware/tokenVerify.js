@@ -2,23 +2,18 @@
 
 const jwt = require("jsonwebtoken");
 const util = require('../util/util');
-const debug = {
-    error: (...args)=>{
-      require('debug')('formio:error')(...args);
-      require('../util/logger')('formio:error').error(...args);
-    },
+const debug = { 
     handler: require('debug')('formio:middleware:tokenVerify'),
   };
-const logger = {
-    handler : require('../util/logger')('formio:middleware:tokenVerify')
-  }
+ 
 
 module.exports=(router)=>{
     const hook = require('../util/hook')(router.formio);
      const {
         jwt: jwtConfig,
       } = router.formio.config;
-     return (req, res, next) => {
+      return (req, res, next) => {
+       const logger = router.logger('formio:middleware:tokenVerify', req.tenantKey);
         if (req.user && req.token && res.token) {
             return next();
        }
@@ -29,15 +24,17 @@ module.exports=(router)=>{
        jwt.verify(token,process.env.FORMIO_JWT_SECRET||jwtConfig.secret, (err, decoded)=>{
         if (err || !decoded) {
             debug.handler(err || `Token could not decoded: ${token}`);
-            logger.handler(err || `Token could not decoded: ${token}` );
+            logger.error(err || `Token could not decoded: ${token}` );
             router.formio.audit('EAUTH_TOKENBAD', req, err);
             router.formio.log('Token', req, 'Token could not be decoded');
             // If the token has expired, send a 440 error (Login Timeout)
             if (err && (err.name === 'JsonWebTokenError')) {
+              logger.error('Bad Token');
               router.formio.log('Token', req, 'Bad Token');
               return res.status(400).send('Bad Token');
             }
             else if (err && (err.name === 'TokenExpiredError')) {
+              logger.error('Token Expired');
               router.formio.audit('EAUTH_TOKENEXPIRED', req, err);
               router.formio.log('Token', req, 'Token Expired');
               return res.status(440).send('Token Expired');
@@ -53,9 +50,12 @@ module.exports=(router)=>{
         }
         if(decoded && !err){
           req.token = decoded
+          req.tenantKey = decoded.user._id;
+          console.log(req.tenantKey,"req.tenantKey")
         }
         // If this is a temporary token, then decode it and set it in the request.
         if (decoded.temp) {
+          logger.info('Using temp token');
           router.formio.log('Token', req, 'Using temp token');
           debug.handler('Temp token');
           logger.handler.info('Temp token');
@@ -66,8 +66,10 @@ module.exports=(router)=>{
           return next();
         }
          if (decoded.isAdmin) {
+          logger.info('User is admin');
           router.formio.log('Token', req, 'User is admin');
           if (req.user) {
+            logger.info('User', req.user._id);
             router.formio.log('User', req, req.user._id);
           }
           req.permissionsChecked = true;

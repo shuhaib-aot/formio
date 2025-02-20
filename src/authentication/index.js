@@ -15,9 +15,7 @@ const _ = require('lodash');
 const debug = {
   authenticate: require('debug')('formio:authentication:authenticate'),
 };
-const logger = {
-  authenticate: require('../util/logger')('formio:authentication:authenticate'),
-};
+ 
 
 module.exports = (router) => {
   const audit = router.formio.audit || (() => {});
@@ -64,6 +62,7 @@ module.exports = (router) => {
    */
 
   const isTokenAllowed = (req, decoded) => {
+    const logger = router.logger('formio:authentication:isTokenAllowed', req.tenantKey || decoded?.tenantKey);
     if (!decoded.allow) {
       return true;
     }
@@ -100,7 +99,7 @@ module.exports = (router) => {
       }
       catch (err) {
         debug.authenticate('Bad token allow string.');
-        logger.authenticate.error('Bad token allow string.');
+        logger.error('Bad token allow string.');
       }
 
       return false;
@@ -219,6 +218,7 @@ module.exports = (router) => {
    *   The callback function to call after authentication.
    */
   const evaluateUser = (req, user, password, passField, username, next) => {
+    const logger = router.logger('formio:authentication:evaluateUser', req.tenantKey);
     if (!user) {
       return next('User or password was incorrect');
     }
@@ -273,13 +273,12 @@ module.exports = (router) => {
           if (err) {
             // Attempt to fail safely and not update the user reference.
             debug.authenticate(err);
-            logger.authenticate.error(err);
+            logger.error(err);
           }
           else {
             // Update the user with the hook results.
             debug.authenticate(user);
-            logger.authenticate.info(user);
-            user = _user;
+             user = _user;
           }
 
           hook.alter('login', user, req, (err) => {

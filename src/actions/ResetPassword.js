@@ -15,12 +15,10 @@ module.exports = (router) => {
   const hook = require('../util/hook')(router.formio);
   const emailer = require('../util/email')(router.formio);
   const debug = require('debug')('formio:action:passrest');
-  const logger = require('../util/logger')('formio:action:passrest')
   const ecode = router.formio.util.errorCodes;
   const logOutput = router.formio.log || debug;
   const log = (...args) => {
-    logOutput(LOG_EVENT, ...args);
-    logger.error(LOG_EVENT,...args);
+    logOutput(LOG_EVENT, ...args); 
   };
 
   /**
@@ -45,9 +43,11 @@ module.exports = (router) => {
     }
 
     static settingsForm(req, res, next) {
+      const logger = router.logger('formio:action:passrest', req.tenantKey);
       // Get the available email transports.
       emailer.availableTransports(req, (err, availableTransports) => {
         if (err) {
+          logger.error(ecode.emailer.ENOTRANSP, err);
           log(req, ecode.emailer.ENOTRANSP, err);
           return next(err);
         }
@@ -189,6 +189,7 @@ module.exports = (router) => {
      * @param next
      */
     getSubmission(req, token, next) {
+      const logger = router.logger('formio:action:passrest:getSubmission', req.tenantKey);
       // Only continue if the resources are provided.
       if (!token.resources || !token.resources.length) {
         return;
@@ -209,6 +210,7 @@ module.exports = (router) => {
       const submissionModel = req.submissionModel || router.formio.resources.submission.model;
       submissionModel.findOne(hook.alter('submissionQuery', query, req), (err, submission) => {
         if (err || !submission) {
+          logger.error(ecode.submission.ENOSUB, err);
           log(req, ecode.submission.ENOSUB, err);
           return next(ecode.submission.ENOSUB);
         }
@@ -227,22 +229,27 @@ module.exports = (router) => {
      * @param next
      */
     updatePassword(req, token, password, next) {
+      const logger = router.logger('formio:action:passrest:updatePassword', req.tenantKey);
       // Validate password matches length restrictions
       // FIO-4741
       if ( (password || '').length > MAX_PASSWORD_LENGTH) {
+        logger.error(ecode.auth.EPASSLENGTH);
         return next(ecode.auth.EPASSLENGTH);
       }
 
       // Get the submission.
       this.getSubmission(req, token, (err, submission) => {
+        const logger = router.logger('formio:action:passrest:updatePassword:getSubmission', req.tenantKey);
         // Make sure we found the user.
         if (err || !submission) {
+          logger.error(ecode.user.ENOUSER, err);
           log(req, ecode.user.ENOUSER, err);
           return next(ecode.user.ENOUSER);
         }
 
         // Get the name of the password field.
         if (!this.settings.password) {
+          logger.error(ecode.auth.EPASSFIELD, new Error(ecode.auth.EPASSFIELD));
           log(req, ecode.auth.EPASSFIELD, new Error(ecode.auth.EPASSFIELD));
           return next(ecode.auth.EPASSFIELD);
         }
@@ -250,6 +257,7 @@ module.exports = (router) => {
         // Manually encrypt and update the password.
         router.formio.encrypt(password, (err, hash) => {
           if (err) {
+            logger.error(ecode.auth.EPASSRESET, err);
             log(req, ecode.auth.EPASSRESET, err);
             return next(ecode.auth.EPASSRESET);
           }
@@ -265,6 +273,7 @@ module.exports = (router) => {
             {$set: setValue},
             (err, newSub) => {
               if (err) {
+                logger.error(ecode.auth.EPASSRESET, err);
                 log(req, ecode.auth.EPASSRESET, err);
                 return next(ecode.auth.EPASSRESET);
               }
@@ -281,6 +290,7 @@ module.exports = (router) => {
      * Initialize the action.
      */
     initialize(method, req, res, next) {
+      const logger = router.logger('formio:action:passrest:initialize', req.tenantKey);
       // See if we have a reset password token.
       const hasResetToken = Boolean(req.tempToken && (req.tempToken.type === 'resetpass'));
       if (!hasResetToken && (method === 'create')) {
@@ -289,6 +299,7 @@ module.exports = (router) => {
 
         // Make sure they have a username.
         if (!username) {
+          logger.error(ecode.user.ENONAMEP, new Error(ecode.user.ENONAMEP));
           log(req, ecode.user.ENONAMEP, new Error(ecode.user.ENONAMEP));
           return res.status(400).send('You must provide a username to reset your password.');
         }
@@ -305,6 +316,7 @@ module.exports = (router) => {
         // Load the form for this request.
         router.formio.cache.loadCurrentForm(req, (err, form) => {
           if (err) {
+            logger.error(ecode.cache.EFORMLOAD, err);
             log(req, ecode.cache.EFORMLOAD, err);
             return next(err);
           }
@@ -312,6 +324,7 @@ module.exports = (router) => {
           // Look up the user.
           this.getSubmission(req, token, (err, submission) => {
             if (err || !submission) {
+              logger.error(ecode.user.ENOUSER, err);
               log(req, ecode.user.ENOUSER, err);
               return next(ecode.user.ENOUSER);
             }
@@ -342,6 +355,7 @@ module.exports = (router) => {
               message,
             }, _.assign(params, req.body, {form}), (err) => {
               if (err) {
+                logger.error(ecode.emailer.ESENDMAIL, err);
                 log(req, ecode.emailer.ESENDMAIL, err);
               }
               // Let them know an email is on its way.
@@ -377,6 +391,7 @@ module.exports = (router) => {
      * @returns {*}
      */
     resolve(handler, method, req, res, next) {
+      const logger = router.logger('formio:action:passrest:resolve', req.tenantKey);
       // See if we have a reset password token.
       const hasResetToken = Boolean(req.tempToken && (req.tempToken.type === 'resetpass'));
 
@@ -422,6 +437,7 @@ module.exports = (router) => {
           !req.tempToken.username ||
           !req.tempToken.form
         ) {
+          logger.error(ecode.auth.ERESETTOKEN, req);
           debug(ecode.auth.ERESETTOKEN, req);
           return res.status(400).send(ecode.auth.ERESETTOKEN);
         }
@@ -429,6 +445,7 @@ module.exports = (router) => {
         // Get the password
         const password = _.get(req.submission.data, this.settings.password);
         if (!password) {
+          logger.error(ecode.auth.ENOPASSP);
           debug(ecode.auth.ENOPASSP);
           return next(ecode.auth.ENOPASSP);
         }
@@ -436,6 +453,7 @@ module.exports = (router) => {
         // Update the password.
         this.updatePassword(req, req.tempToken, password, function(err) {
           if (err) {
+            logger.error(ecode.auth.EPASSRESET, new Error(ecode.auth.EPASSRESET));
             log(req, ecode.auth.EPASSRESET, new Error(ecode.auth.EPASSRESET));
             return res.status(400).send('Unable to update the password. Please try again.');
           }

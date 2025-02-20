@@ -3,16 +3,13 @@
 const Resource = require('resourcejs');
 const async = require('async');
 const {VM} = require('vm2');
-const _ = require('lodash');
-const loggerService = require('../util/logger');
+const _ = require('lodash'); 
 const debug = {
   error: (...args) => {
     require('debug')('formio:error')(...args);
-    loggerService('formio:error').error(...args)
   },
   action: (...args) =>{
     require('debug')('formio:action')(...args);
-    loggerService('formio:action').info(...args);
   }
 };
 const util = require('../util/util');
@@ -114,6 +111,7 @@ module.exports = (router) => {
      * @param next
      */
     search(handler, method, req, res, next) {
+      const logger = router.logger('formio:actions:search', req.tenantKey);
       if (!req.formId) {
         return next(null, []);
       }
@@ -129,6 +127,7 @@ module.exports = (router) => {
         // Load the actions.
         this.loadActions(req, res, (err) => {
           if (err) {
+            logger.error(err);
             return next(err);
           }
 
@@ -293,6 +292,7 @@ module.exports = (router) => {
     },
 
     async shouldExecute(action, req) {
+      const logger = router.logger('formio:actions:shouldExecute', req.tenantKey);
       const condition = action.condition;
       if (!condition) {
         return true;
@@ -358,6 +358,7 @@ module.exports = (router) => {
             err
           );
           debug.error(err);
+          logger.error(err);
           return false;
         }
       }
@@ -374,7 +375,13 @@ module.exports = (router) => {
         const value = isDelete? String(_.get(deletedSubmission, `data.${field}`, '')) :
           String(_.get(req, `body.data.${field}`, ''));
         const compare = String(condition.value || '');
-        debug.action(
+        logger.error(
+          '\nfield', field,
+          '\neq', eq,
+          '\nvalue', value,
+          '\ncompare', compare
+        );
+         debug.action(
           '\nfield', field,
           '\neq', eq,
           '\nvalue', value,
@@ -657,6 +664,7 @@ JSON: { "in": [ "authenticated", { "var": "data.roles" } ] }`;
   }
 
   async function getDeletedSubmission(req) {
+    const logger = router.logger('formio:actions:getDeletedSubmission', req.tenantKey);
     try {
       return await promisify(router.formio.cache.loadSubmission)(
         req,
@@ -665,6 +673,7 @@ JSON: { "in": [ "authenticated", { "var": "data.roles" } ] }`;
       );
     }
     catch (err) {
+      logger.error(err);
       router.formio.log(
         'Error during executing action custom logic',
         req,
@@ -718,13 +727,16 @@ JSON: { "in": [ "authenticated", { "var": "data.roles" } ] }`;
 
   // Return a list of available actions.
   router.get('/form/:formId/actions/:name', (req, res, next) => {
+    const logger = router.logger('formio:actions:get', req.tenantKey);
     const action = ActionIndex.actions[req.params.name];
     if (!action) {
+      logger.error('Action not found');
       return res.status(400).send('Action not found');
     }
 
     action.info(req, res, (err, info) => {
       if (err) {
+        logger.error(err);
         router.formio.log('Error, can\'t get action info', req, err);
         return next(err);
       }
@@ -739,12 +751,14 @@ JSON: { "in": [ "authenticated", { "var": "data.roles" } ] }`;
       try {
         getSettingsForm(action, req, (err, settings) => {
           if (err) {
+            logger.error(err);
             router.formio.log('Error, can\'t get action settings', req, err);
             return res.status(400).send(err);
           }
 
           action.settingsForm(req, res, (err, settingsForm) => {
             if (err) {
+              logger.error(err);
               router.formio.log('Error, can\'t get form settings', req, err);
               return next(err);
             }
@@ -765,6 +779,7 @@ JSON: { "in": [ "authenticated", { "var": "data.roles" } ] }`;
         });
       }
       catch (e) {
+        logger.error(e);
         debug.error(e);
         return res.sendStatus(400);
       }

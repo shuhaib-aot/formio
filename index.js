@@ -14,14 +14,13 @@ const nunjucks = require('nunjucks');
 const util = require('./src/util/util');
 const log = require('debug')('formio:log');
 const gc = require('expose-gc/function');
-const logger = require('./src/util/logger')('formio:log');
-
 const originalGetToken = util.Formio.getToken;
 const originalEvalContext = util.Formio.Components.components.component.prototype.evalContext;
 
 // Keep track of the formio interface.
 router.formio = {};
-
+router.logger = require('./src/util/logger');
+const logger = router.logger('formio:log');
 // Allow libraries to use a single instance of mongoose.
 router.formio.mongoose = mongoose;
 
@@ -47,8 +46,7 @@ module.exports = function(config) {
 
   router.formio.log = (event, req, ...info) => {
     const result = router.formio.hook.alter('log', event, req, ...info);
-    logger.info(event, ...info);
-    if (result) {
+      if (result) {
       log(event, ...info);
     }
   };

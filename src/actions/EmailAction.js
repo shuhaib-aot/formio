@@ -7,12 +7,10 @@ module.exports = (router) => {
   const Action = router.formio.Action;
   const hook = require('../util/hook')(router.formio);
   const emailer = require('../util/email')(router.formio);
-  const debug = require('debug')('formio:action:email');
-  const logger = require('../util/logger')('formio:action:email');
+  const debug = require('debug')('formio:action:email'); 
   const ecode = router.formio.util.errorCodes;
   const logOutput = router.formio.log || debug;
-  const log = (...args) => {
-    logger.error(LOG_EVENT,...args);
+  const log = (...args) => { 
     logOutput(LOG_EVENT, ...args);
   };
 ;
@@ -48,9 +46,11 @@ module.exports = (router) => {
      * @param next
      */
     static settingsForm(req, res, next) {
+      const logger = router.logger('formio:action:email', req.tenantKey);
       // Get the available transports.
       emailer.availableTransports(req, (err, availableTransports) => {
         if (err) {
+          logger.error(ecode.emailer.ENOTRANSP,err);
           log(req, ecode.emailer.ENOTRANSP, err);
           return next(err);
         }
@@ -205,14 +205,17 @@ module.exports = (router) => {
 
       // Load the form for this request.
       router.formio.cache.loadCurrentForm(req, (err, form) => {
+        const logger = router.logger('formio:action:email:loadCurrentForm', req.tenantKey);
         if (err) {
           setActionItemMessage('Error loading form', err, 'error');
+          logger.error(ecode.cache.EFORMLOAD, err);
           log(req, ecode.cache.EFORMLOAD, err);
           return next(err);
         }
         if (!form) {
           const err = new Error(ecode.form.ENOFORM);
-          setActionItemMessage('Error no form', err, 'error');
+          setActionItemMessage('Error no form', err, 'error');         
+           logger.error(ecode.cache.EFORMLOAD, err);
           log(req, ecode.cache.EFORMLOAD, err);
           return next(err);
         }
@@ -265,6 +268,7 @@ module.exports = (router) => {
                     setActionItemMessage('Error sending message', {
                       message: err.message || err
                     }, 'error');
+                    logger.error(ecode.emailer.ESENDMAIL, JSON.stringify(err));
                     log(req, ecode.emailer.ESENDMAIL, JSON.stringify(err));
                   }
                   else {
@@ -275,6 +279,7 @@ module.exports = (router) => {
           })
           .catch((err) => {
             setActionItemMessage('Emailer error', err, 'error');
+            logger.error(ecode.emailer.ESUBPARAMS, err);
             log(req, ecode.emailer.ESUBPARAMS, err);
           });
       });
